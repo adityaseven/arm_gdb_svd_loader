@@ -69,7 +69,17 @@ class cmsis_svd_peripheral():
             gdb.write(row)
 
     def print_peripheral_info(self):
-        pass
+        p = self.peripheral
+        b = p.address_block
+        gdb.write("\t ======= PERIPHERAL  ====== \n")
+        gdb.write("\t Name:                 {}\n".format(p.name))
+        gdb.write("\t Base Address:         0x{:X}\n".format(p.base_address))
+        gdb.write("\t Prepend To Name:      {}\n".format(p.prepend_to_name))
+        gdb.write("\t Group Name:           {}\n".format(p.group_name))
+        gdb.write("\t Description:          {}\n".format(p.description))
+        gdb.write("\t Address Usage:        {}\n".format(b.usage))
+        gdb.write("\t Address Size:         0x{:X}\n".format(b.size))
+        gdb.write("\t Address Offset:       0x{:X}\n".format(b.offset))
 
     def print_info(self):
         if len(self.args) == 0:
