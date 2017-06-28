@@ -27,6 +27,45 @@ class load_cmsis_svd(gdb.Command):
         cmsis_svd(self.parser)
         gdb.write("Loaded file for device {} \n".format(self.device.name))
 
+class cmsis_svd_registers():
+    """
+        Print information about the registers
+    """
+
+    #This function will check if args[0] exsists in the peripheral list
+    def __init__(self, peripheral, args):
+        self.peripheral = peripheral
+
+        regs = self.peripheral.registers
+        target_register = args[0]
+
+        self.register = [r for r in regs if r.name == target_register][0]
+        self.args = args[1:]
+
+    def print_register_info(self):
+        r = self.register
+        p = self.peripheral
+        actual_addr_off = r.address_offset + p.base_address
+        gdb.write("\t ======= REGISTER  ====== \n")
+        gdb.write("\t Name:                 {}\n".format(r.name))
+        gdb.write("\t Description:          {}\n".format(r.description))
+        gdb.write("\t Base Address:         0x{:X}\n".format(actual_addr_off))
+        gdb.write("\t Address Offset:       0x{:X}\n".format(r.address_offset))
+        gdb.write("\t Address Size:         {}\n".format(r.size))
+        gdb.write("\t Reset Value:          0x{:X}\n".format(r.reset_value))
+        gdb.write("\t Reset Mask:           0x{:X}\n".format(r.reset_mask))
+        gdb.write("\t Access:               {}\n".format(r.access))
+
+    def print_info(self):
+        if len(self.args) == 0:
+            pass
+            #self.print_sub_registers()
+        elif self.args[0].lower() == "info":
+            self.print_register_info()
+        else:
+            pass
+
+
 class cmsis_svd_peripheral():
     """
     This class contains print, name desc, width etc sub registers
@@ -87,7 +126,11 @@ class cmsis_svd_peripheral():
         elif self.args[0].lower() == "info":
             self.print_peripheral_info()
         else:
-            pass
+            try:
+                reg = cmsis_svd_registers(self.peripheral, self.args)
+                reg.print_info()
+            except:
+                gdb.write("Invalid register value\n")
 
 class cmsis_svd(gdb.Command):
     """ Run commands using cmsis svd to show information """
