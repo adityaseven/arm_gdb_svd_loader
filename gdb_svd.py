@@ -27,6 +27,58 @@ class load_cmsis_svd(gdb.Command):
         cmsis_svd(self.parser)
         gdb.write("Loaded file for device {} \n".format(self.device.name))
 
+class cmsis_svd_peripheral():
+    """
+    This class contains print, name desc, width etc sub registers
+    """
+
+    #This function will check if args[0] exsists in the peripheral list
+    def __init__(self, parser, args):
+        self.device = parser.get_device()
+
+        ps = self.device.peripherals
+        target_peripheral = args[0]
+
+        self.peripheral = [p for p in ps if p.name == target_peripheral][0]
+        self.args = args[1:]
+
+    def print_registers(self):
+        rs = self.peripheral.registers
+        p = self.peripheral
+
+        name_width = 0
+        base_addr_width = 0
+        for r in rs:
+            name_width = max(name_width, len(r.name))
+            len_addr_offset = r.address_offset + p.base_address
+            base_addr_width = max(base_addr_width, len(str(len_addr_offset)))
+
+        name_width = name_width + 2
+        base_addr_width = base_addr_width + 2
+
+        for r in rs:
+            desc = r.description
+            len_addr_offset = r.address_offset + p.base_address
+            pad_baddr = "".ljust(base_addr_width - len(str(len_addr_offset)))
+            pad_name  = "".ljust(name_width - len(r.name))
+            row = "\t{}:{} 0x{:X} {} {}\n".format(r.name,
+                                            pad_name,
+                                            int(len_addr_offset),
+                                            pad_baddr,
+                                            desc)
+            gdb.write(row)
+
+    def print_peripheral_info(self):
+        pass
+
+    def print_info(self):
+        if len(self.args) == 0:
+            self.print_registers()
+        elif self.args[0].lower() == "info":
+            self.print_peripheral_info()
+        else:
+            pass
+
 class cmsis_svd(gdb.Command):
     """ Run commands using cmsis svd to show information """
 
@@ -95,7 +147,11 @@ class cmsis_svd(gdb.Command):
             self.print_device_info()
             self.print_cpu_info()
         else:
-            gdb.write("Invalid command\n")
+            try:
+                p = cmsis_svd_peripheral(self.parser, arg)
+            except:
+                gdb.write("Invalid Entry\n")
+            p.print_info()
 
 
     def invoke(self, args, from_tty):
@@ -125,6 +181,6 @@ class cmsis_svd(gdb.Command):
             self.process_device(arg)
 
 if __name__ == "__main__":
-    # testing function
+   # testing function
 
     load_cmsis_svd()
