@@ -27,6 +27,32 @@ class load_cmsis_svd(gdb.Command):
         cmsis_svd(self.parser)
         gdb.write("Loaded file for device {} \n".format(self.device.name))
 
+class cmsis_svd_sub_register():
+
+    def __init__(self, register, args, register_value=None):
+        self.register = register
+
+        sub_regs = self.register.fields
+        target_sub_register = args[0]
+
+        self.sub_register = [s for s in sub_regs if s.name == target_sub_register][0]
+
+        if (len(args) != 1):
+            print "Fields do not take arguments"
+            raise Exception("Fields do not take arguments")
+
+    def print_register_field_info(self):
+        f = self.sub_register
+        gdb.write("\t ======= REGISTER FIELD  ====== \n")
+        gdb.write("\t Name:                 {}\n".format(f.name))
+        gdb.write("\t Description:          {}\n".format(f.description))
+        gdb.write("\t Field Offset:         0x{:X}\n".format(f.bit_offset))
+        gdb.write("\t Field Width:          {:X}\n".format(f.bit_width))
+        gdb.write("\t Access:               {}\n".format(f.access))
+
+    def print_info(self):
+        self.print_register_field_info()
+
 class cmsis_svd_registers():
     """
         Print information about the registers
@@ -105,8 +131,11 @@ class cmsis_svd_registers():
         elif self.args[0].lower() == "info":
             self.print_register_info()
         else:
-            pass
-
+            try:
+                field = cmsis_svd_sub_register(self.register, self.args)
+                field.print_info()
+            except:
+                gdb.write("Invalid field register value\n")
 
 class cmsis_svd_peripheral():
     """
@@ -168,10 +197,10 @@ class cmsis_svd_peripheral():
         elif self.args[0].lower() == "info":
             self.print_peripheral_info()
         else:
-            #try:
+            try:
                 reg = cmsis_svd_registers(self.peripheral, self.args)
                 reg.print_info()
-            #except:
+            except:
                 gdb.write("Invalid register value\n")
 
 class cmsis_svd(gdb.Command):
