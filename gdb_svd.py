@@ -42,6 +42,49 @@ class cmsis_svd_registers():
         self.register = [r for r in regs if r.name == target_register][0]
         self.args = args[1:]
 
+    def print_sub_registers(self):
+        reg  = self.register
+        sr = reg.fields
+
+        s        =  max(sr, key=lambda(s): len(s.name))
+        sr_width =  len(s.name) + 2
+
+        sr_info = {}
+        for s in sr:
+            s_info = {}
+
+            if(s.bit_width == 1):
+                offset =  "[{}]".format(s.bit_offset)
+            else:
+                l = s.bit_offset + s.bit_width -1
+                r = s.bit_offset
+                offset = "[{}-{}]".format(l,r)
+
+            reset_mask = ((1 << s.bit_width) - 1) << s.bit_offset
+            reset_val = reg.reset_value & reset_mask
+
+            s_info["offset"] = offset
+            s_info["reset_val"] = reset_val
+            sr_info[s.name] = s_info
+
+        x = max(sr_info.keys(), key=lambda(k): len(sr_info[k]["offset"]))
+        max_offset_width = len(sr_info[x]["offset"]) + 2
+
+        #TODO: needs to be cleaned
+        for s in sr[::-1]:
+            offset = str(sr_info[s.name]["offset"])
+            reset_val = str(sr_info[s.name]["reset_val"])
+
+            row = "\t{}:{} {}{}{}{}{}\n".format(s.name,
+                                      "".ljust(sr_width - len(s.name)),
+                                      "*",
+                                      "".ljust(4),
+                                      offset,
+                                      "".ljust(max_offset_width - len(offset)),
+                                      reset_val)
+            gdb.write(row)
+
+
     def print_register_info(self):
         r = self.register
         p = self.peripheral
@@ -58,8 +101,7 @@ class cmsis_svd_registers():
 
     def print_info(self):
         if len(self.args) == 0:
-            pass
-            #self.print_sub_registers()
+            self.print_sub_registers()
         elif self.args[0].lower() == "info":
             self.print_register_info()
         else:
@@ -126,10 +168,10 @@ class cmsis_svd_peripheral():
         elif self.args[0].lower() == "info":
             self.print_peripheral_info()
         else:
-            try:
+            #try:
                 reg = cmsis_svd_registers(self.peripheral, self.args)
                 reg.print_info()
-            except:
+            #except:
                 gdb.write("Invalid register value\n")
 
 class cmsis_svd(gdb.Command):
