@@ -94,39 +94,18 @@ class cmsis_svd_registers():
         f =  max(fields, key=lambda(f): len(f.name))
         field_name_width =  len(f.name) + 2
 
-        field_info = {}
-        for f in fields:
-            f_info = {}
-
-            if(f.bit_width == 1):
-                offset =  "[{}]".format(f.bit_offset)
-            else:
-                l = f.bit_offset + f.bit_width -1
-                r = f.bit_offset
-                offset = "[{}-{}]".format(l,r)
-
-            reset_mask = ((1 << f.bit_width) - 1) << f.bit_offset
-            reset_val = reg.reset_value & reset_mask
-
-            f_info["offset"] = offset
-            f_info["reset_val"] = reset_val
-            field_info[f.name] = f_info
-
-        x = max(field_info.keys(), key=lambda(k): len(field_info[k]["offset"]))
-        max_offset_width = len(field_info[x]["offset"]) + 2
-
         #TODO: needs to be cleaned
         for f in fields[::-1]:
-            offset = str(field_info[f.name]["offset"])
-            reset_val = str(field_info[f.name]["reset_val"])
+
+            f_obj = cmsis_svd_register_field(self.register, [f.name])
 
             row = "\t{}:{} {}{}{}{}{}\n".format(f.name,
                                       "".ljust(field_name_width - len(f.name)),
                                       "*",
                                       "".ljust(4),
-                                      offset,
-                                      "".ljust(max_offset_width - len(offset)),
-                                      reset_val)
+                                      f_obj.offset,
+                                      "".ljust(8 - len(f_obj.offset)),
+                                      f_obj.reset_val)
             gdb.write(row)
 
 
