@@ -41,13 +41,30 @@ class cmsis_svd_register_field():
             print "Fields do not take arguments"
             raise Exception("Fields do not take arguments")
 
+        self.__setup_field_values__()
+
+    def __setup_field_values__(self):
+        f = self.field
+        if (f.bit_width == 1):
+            self.offset =  "[{}]".format(f.bit_offset)
+        else:
+            l = f.bit_offset + f.bit_width -1
+            r = f.bit_offset
+            self.offset = "[{}-{}]".format(l,r)
+
+        self.reset_mask = ((1 << f.bit_width) - 1) << f.bit_offset
+        self.reset_val = self.register.reset_value & self.reset_mask
+
     def print_register_field_info(self):
         f = self.field
         gdb.write("\t ======= REGISTER FIELD  ====== \n")
         gdb.write("\t Name:                 {}\n".format(f.name))
         gdb.write("\t Description:          {}\n".format(f.description))
-        gdb.write("\t Field Offset:         0x{:X}\n".format(f.bit_offset))
+        gdb.write("\t Offset:               {}\n".format(self.offset))
         gdb.write("\t Field Width:          {:X}\n".format(f.bit_width))
+        gdb.write("\t Field Offset:         0x{:X}\n".format(f.bit_offset))
+        gdb.write("\t Reset Mask:           0x{:X}\n".format(self.reset_mask))
+        gdb.write("\t Reset Value:          0x{:X}\n".format(self.reset_val))
         gdb.write("\t Access:               {}\n".format(f.access))
 
     def print_info(self):
