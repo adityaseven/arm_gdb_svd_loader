@@ -85,6 +85,11 @@ class cmsis_svd_registers():
         self.register = [r for r in regs if r.name == target_register][0]
         self.args = args[1:]
 
+        self.__setup_register_values__()
+
+    def __setup_register_values__(self):
+            self.address = self.peripheral.base_address + self.register.address_offset
+
     def print_register_fields(self):
         reg  = self.register
         fields = reg.fields
@@ -109,11 +114,10 @@ class cmsis_svd_registers():
     def print_register_info(self):
         r = self.register
         p = self.peripheral
-        actual_addr_off = r.address_offset + p.base_address
         gdb.write("\t ======= REGISTER  ====== \n")
         gdb.write("\t Name:                 {}\n".format(r.name))
         gdb.write("\t Description:          {}\n".format(r.description))
-        gdb.write("\t Base Address:         0x{:X}\n".format(actual_addr_off))
+        gdb.write("\t Base Address:         0x{:X}\n".format(self.address))
         gdb.write("\t Address Offset:       0x{:X}\n".format(r.address_offset))
         gdb.write("\t Address Size:         {}\n".format(r.size))
         gdb.write("\t Reset Value:          0x{:X}\n".format(r.reset_value))
@@ -162,13 +166,14 @@ class cmsis_svd_peripheral():
         base_addr_width = base_addr_width + 2
 
         for r in rs:
+            r_obj = cmsis_svd_registers(self.peripheral, [r.name])
+
             desc = r.description
-            len_addr_offset = r.address_offset + p.base_address
             pad_baddr = "".ljust(base_addr_width - len(str(len_addr_offset)))
             pad_name  = "".ljust(name_width - len(r.name))
             row = "\t{}:{} 0x{:X} {} {}\n".format(r.name,
                                             pad_name,
-                                            int(len_addr_offset),
+                                            r_obj.address,
                                             pad_baddr,
                                             desc)
             gdb.write(row)
