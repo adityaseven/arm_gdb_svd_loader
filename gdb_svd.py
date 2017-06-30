@@ -27,7 +27,7 @@ class load_cmsis_svd(gdb.Command):
         cmsis_svd(self.parser)
         gdb.write("Loaded file for device {} \n".format(self.device.name))
 
-class cmsis_svd_sub_register():
+class cmsis_svd_register_field():
 
     def __init__(self, register, args, register_value=None):
         self.register = register
@@ -68,9 +68,11 @@ class cmsis_svd_registers():
         self.register = [r for r in regs if r.name == target_register][0]
         self.args = args[1:]
 
-    def print_sub_registers(self):
+    def print_register_fields(self):
         reg  = self.register
         sr = reg.fields
+
+        #create classes our all of them
 
         s        =  max(sr, key=lambda(s): len(s.name))
         sr_width =  len(s.name) + 2
@@ -127,12 +129,12 @@ class cmsis_svd_registers():
 
     def print_info(self):
         if len(self.args) == 0:
-            self.print_sub_registers()
+            self.print_register_fields()
         elif self.args[0].lower() == "info":
             self.print_register_info()
         else:
             try:
-                field = cmsis_svd_sub_register(self.register, self.args)
+                field = cmsis_svd_register_field(self.register, self.args)
                 field.print_info()
             except:
                 gdb.write("Invalid field register value\n")
