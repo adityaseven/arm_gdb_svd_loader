@@ -89,12 +89,9 @@ class cmsis_svd_registers():
         reg  = self.register
         fields = reg.fields
 
-        #create classes our all of them
-
         f =  max(fields, key=lambda(f): len(f.name))
         field_name_width =  len(f.name) + 2
 
-        #TODO: needs to be cleaned
         for f in fields[::-1]:
 
             f_obj = cmsis_svd_register_field(self.register, [f.name])
