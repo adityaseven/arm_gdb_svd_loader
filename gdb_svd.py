@@ -32,17 +32,17 @@ class cmsis_svd_register_field():
     def __init__(self, register, args, register_value=None):
         self.register = register
 
-        sub_regs = self.register.fields
-        target_sub_register = args[0]
+        fields = self.register.fields
+        target_register_field = args[0]
 
-        self.sub_register = [s for s in sub_regs if s.name == target_sub_register][0]
+        self.field = [f for f in fields if f.name == target_register_field][0]
 
         if (len(args) != 1):
             print "Fields do not take arguments"
             raise Exception("Fields do not take arguments")
 
     def print_register_field_info(self):
-        f = self.sub_register
+        f = self.field
         gdb.write("\t ======= REGISTER FIELD  ====== \n")
         gdb.write("\t Name:                 {}\n".format(f.name))
         gdb.write("\t Description:          {}\n".format(f.description))
