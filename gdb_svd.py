@@ -29,15 +29,13 @@ class load_cmsis_svd(gdb.Command):
 
 class cmsis_svd_register_field():
 
-    def __init__(self, register, args, register_value=None):
+    def __init__(self, register, target_register_field, args = None, register_value=None):
         self.register = register
 
         fields = self.register.fields
-        target_register_field = args[0]
-
         self.field = [f for f in fields if f.name == target_register_field][0]
 
-        if (len(args) != 1):
+        if args != None:
             print "Fields do not take arguments"
             raise Exception("Fields do not take arguments")
 
@@ -76,14 +74,13 @@ class cmsis_svd_registers():
     """
 
     #This function will check if args[0] exsists in the peripheral list
-    def __init__(self, peripheral, args):
+    def __init__(self, peripheral, target_register, args = None):
         self.peripheral = peripheral
 
         regs = self.peripheral.registers
-        target_register = args[0]
-
         self.register = [r for r in regs if r.name == target_register][0]
-        self.args = args[1:]
+
+        self.args = args
 
         self.__setup_register_values__()
 
@@ -98,8 +95,7 @@ class cmsis_svd_registers():
         field_name_width =  len(f.name) + 2
 
         for f in fields[::-1]:
-
-            f_obj = cmsis_svd_register_field(self.register, [f.name])
+            f_obj = cmsis_svd_register_field(self.register, f.name)
 
             row = "\t{}:{} {}{}{}{}{}\n".format(f.name,
                                       "".ljust(field_name_width - len(f.name)),
@@ -125,13 +121,18 @@ class cmsis_svd_registers():
         gdb.write("\t Access:               {}\n".format(r.access))
 
     def print_info(self):
-        if len(self.args) == 0:
+        if self.args == None:
             self.print_register_fields()
         elif self.args[0].lower() == "info":
             self.print_register_info()
         else:
             try:
-                field = cmsis_svd_register_field(self.register, self.args)
+                if len(self.args[1:]) == 0:
+                    other_args = None
+                else:
+                    other_args = self.args[1:]
+
+                field = cmsis_svd_register_field(self.register, self.args[0], other_args)
                 field.print_info()
             except:
                 gdb.write("Invalid field register value\n")
@@ -142,14 +143,13 @@ class cmsis_svd_peripheral():
     """
 
     #This function will check if args[0] exsists in the peripheral list
-    def __init__(self, parser, args):
+    def __init__(self, parser, target_peripheral, args = None):
         self.device = parser.get_device()
 
         ps = self.device.peripherals
-        target_peripheral = args[0]
-
         self.peripheral = [p for p in ps if p.name == target_peripheral][0]
-        self.args = args[1:]
+
+        self.args = args;
 
     def print_registers(self):
         rs = self.peripheral.registers
@@ -166,7 +166,7 @@ class cmsis_svd_peripheral():
         base_addr_width = base_addr_width + 2
 
         for r in rs:
-            r_obj = cmsis_svd_registers(self.peripheral, [r.name])
+            r_obj = cmsis_svd_registers(self.peripheral, r.name)
 
             desc = r.description
             pad_baddr = "".ljust(base_addr_width - len(str(len_addr_offset)))
@@ -192,13 +192,17 @@ class cmsis_svd_peripheral():
         gdb.write("\t Address Offset:       0x{:X}\n".format(b.offset))
 
     def print_info(self):
-        if len(self.args) == 0:
+        if self.args == None:
             self.print_registers()
         elif self.args[0].lower() == "info":
             self.print_peripheral_info()
         else:
             try:
-                reg = cmsis_svd_registers(self.peripheral, self.args)
+                if (len(self.args) == 1):
+                    other_args = None
+                else:
+                    other_args = self.args[1:]
+                reg = cmsis_svd_registers(self.peripheral, self.args[0], other_args)
                 reg.print_info()
             except:
                 gdb.write("Invalid register value\n")
@@ -258,24 +262,29 @@ class cmsis_svd(gdb.Command):
         gdb.write("\t Nvic Prio Bits:       {}\n".format(c.nvic_prio_bits))
         gdb.write("\t Vendor Systick Config:{}\n".format(c.vendor_systick_config))
 
-    def process_device(self, arg):
-        if len(arg) == 0:
-            gdb.write("Invalid arguments\n")
-
+    def process_device(self):
         #TODO: Need to create a table for these commands
-        if arg[0].lower() == "info":
+        #TODO: Handle argumetns to info, cpu etc
+        if len(self.args) == 0:
+            self.print_peripherals()
+        elif self.args[0].lower() == "info":
             self.print_device_info()
-        elif arg[0].lower() == "cpu":
+        elif self.args[0].lower() == "cpu":
             self.print_cpu_info()
-        elif arg[0].lower() == "all":
+        elif self.args[0].lower() == "all":
             self.print_device_info()
             self.print_cpu_info()
         else:
             try:
-                p = cmsis_svd_peripheral(self.parser, arg)
+                if (len(self.args) == 1):
+                    other_args = None
+                else:
+                    other_args = self.args[1:]
+
+                p = cmsis_svd_peripheral(self.parser, self.args[0], other_args)
+                p.print_info()
             except:
                 gdb.write("Invalid Entry\n")
-            p.print_info()
 
 
     def invoke(self, args, from_tty):
@@ -297,12 +306,8 @@ class cmsis_svd(gdb.Command):
         info-svd UART0 C1 TXEN reset - value at reset
         info-svd UART0 C1 TXEN all - value
         """
-        arg = gdb.string_to_argv(args)
-
-        if len(arg) == 0:
-            self.print_peripherals()
-        else:
-            self.process_device(arg)
+        self.args = gdb.string_to_argv(args)
+        self.process_device()
 
 if __name__ == "__main__":
    # testing function
