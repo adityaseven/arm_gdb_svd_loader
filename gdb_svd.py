@@ -87,41 +87,41 @@ class cmsis_svd_registers():
 
     def print_register_fields(self):
         reg  = self.register
-        sr = reg.fields
+        fields = reg.fields
 
         #create classes our all of them
 
-        s        =  max(sr, key=lambda(s): len(s.name))
-        sr_width =  len(s.name) + 2
+        f =  max(fields, key=lambda(f): len(f.name))
+        field_name_width =  len(f.name) + 2
 
-        sr_info = {}
-        for s in sr:
-            s_info = {}
+        field_info = {}
+        for f in fields:
+            f_info = {}
 
-            if(s.bit_width == 1):
-                offset =  "[{}]".format(s.bit_offset)
+            if(f.bit_width == 1):
+                offset =  "[{}]".format(f.bit_offset)
             else:
-                l = s.bit_offset + s.bit_width -1
-                r = s.bit_offset
+                l = f.bit_offset + f.bit_width -1
+                r = f.bit_offset
                 offset = "[{}-{}]".format(l,r)
 
-            reset_mask = ((1 << s.bit_width) - 1) << s.bit_offset
+            reset_mask = ((1 << f.bit_width) - 1) << f.bit_offset
             reset_val = reg.reset_value & reset_mask
 
-            s_info["offset"] = offset
-            s_info["reset_val"] = reset_val
-            sr_info[s.name] = s_info
+            f_info["offset"] = offset
+            f_info["reset_val"] = reset_val
+            field_info[f.name] = f_info
 
-        x = max(sr_info.keys(), key=lambda(k): len(sr_info[k]["offset"]))
-        max_offset_width = len(sr_info[x]["offset"]) + 2
+        x = max(field_info.keys(), key=lambda(k): len(field_info[k]["offset"]))
+        max_offset_width = len(field_info[x]["offset"]) + 2
 
         #TODO: needs to be cleaned
-        for s in sr[::-1]:
-            offset = str(sr_info[s.name]["offset"])
-            reset_val = str(sr_info[s.name]["reset_val"])
+        for f in fields[::-1]:
+            offset = str(field_info[f.name]["offset"])
+            reset_val = str(field_info[f.name]["reset_val"])
 
-            row = "\t{}:{} {}{}{}{}{}\n".format(s.name,
-                                      "".ljust(sr_width - len(s.name)),
+            row = "\t{}:{} {}{}{}{}{}\n".format(f.name,
+                                      "".ljust(field_name_width - len(f.name)),
                                       "*",
                                       "".ljust(4),
                                       offset,
