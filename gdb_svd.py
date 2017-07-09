@@ -27,6 +27,9 @@ class load_cmsis_svd(gdb.Command):
         cmsis_svd(self.parser)
         gdb.write("Loaded file for device {} \n".format(self.device.name))
 
+        gdb.write("Enable memory read\n")
+        gdb.execute("set mem inaccessible-by-default off")
+
 class cmsis_svd_register_field():
 
     def __init__(self, register, target_register_field, args = None, register_value=None):
@@ -34,6 +37,11 @@ class cmsis_svd_register_field():
 
         fields = self.register.fields
         self.field = [f for f in fields if f.name == target_register_field][0]
+
+        if register_value == None:
+            self.register_value = 0
+        else:
+            self.register_value = register_value
 
         if args != None:
             print "Fields do not take arguments"
@@ -52,6 +60,7 @@ class cmsis_svd_register_field():
 
         self.reset_mask = ((1 << f.bit_width) - 1) << f.bit_offset
         self.reset_val = self.register.reset_value & self.reset_mask
+        self.field_value = (self.register_value & self.reset_mask) >> f.bit_offset
 
     def print_register_field_info(self):
         f = self.field
@@ -86,6 +95,20 @@ class cmsis_svd_registers():
 
     def __setup_register_values__(self):
             self.address = self.peripheral.base_address + self.register.address_offset
+            self.register_value = self.read()
+
+    def read(self):
+        r = self.register
+
+        if 0 < r.size and r.size <= 8:
+            bits = 8;
+        elif 8 < r.size and r.size <= 16:
+            bits = 16;
+        else:
+            bits = 32
+
+        reg_read_command = "*(uint{}_t *)0x{:x}".format(bits,self.address)
+        return int(gdb.parse_and_eval(reg_read_command))
 
     def print_register_fields(self):
         reg  = self.register
@@ -95,11 +118,11 @@ class cmsis_svd_registers():
         field_name_width =  len(f.name) + 2
 
         for f in fields[::-1]:
-            f_obj = cmsis_svd_register_field(self.register, f.name)
-
-            row = "\t{}:{} {}{}{}{}{}\n".format(f.name,
+            f_obj = cmsis_svd_register_field(self.register, f.name,
+                                        register_value = self.register_value)
+            row = "\t{}:{} 0x{:X} {} {} {} {}\n".format(f.name,
                                       "".ljust(field_name_width - len(f.name)),
-                                      "*",
+                                      f_obj.field_value,
                                       "".ljust(4),
                                       f_obj.offset,
                                       "".ljust(8 - len(f_obj.offset)),
@@ -132,7 +155,9 @@ class cmsis_svd_registers():
                 else:
                     other_args = self.args[1:]
 
-                field = cmsis_svd_register_field(self.register, self.args[0], other_args)
+                field = cmsis_svd_register_field(self.register, self.args[0],
+                                                 other_args,
+                                                self.register_value)
                 field.print_info()
             except:
                 gdb.write("Invalid field register value\n")
@@ -171,9 +196,10 @@ class cmsis_svd_peripheral():
             desc = r.description
             pad_baddr = "".ljust(base_addr_width - len(str(len_addr_offset)))
             pad_name  = "".ljust(name_width - len(r.name))
-            row = "\t{}:{} 0x{:X} {} {}\n".format(r.name,
+            row = "\t{}:{} 0x{:X}:0x{:02X} {} {}\n".format(r.name,
                                             pad_name,
                                             r_obj.address,
+                                            r_obj.register_value,
                                             pad_baddr,
                                             desc)
             gdb.write(row)
@@ -285,7 +311,6 @@ class cmsis_svd(gdb.Command):
                 p.print_info()
             except:
                 gdb.write("Invalid Entry\n")
-
 
     def invoke(self, args, from_tty):
         """
