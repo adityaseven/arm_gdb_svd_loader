@@ -117,6 +117,9 @@ class cmsis_svd_registers():
         f =  max(fields, key=lambda(f): len(f.name))
         field_name_width =  len(f.name) + 2
 
+        row = "\t{}: 0x{:X}\n".format(reg.name, self.register_value)
+        gdb.write(row)
+
         for f in fields[::-1]:
             f_obj = cmsis_svd_register_field(self.register, f.name,
                                         register_value = self.register_value)
